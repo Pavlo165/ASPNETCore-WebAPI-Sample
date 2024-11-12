@@ -35,3 +35,35 @@ stages:
           - script: |
               echo "Docker image $(IMAGE_NAME):$(Build.BuildId) was successfully pushed to $(ACR_NAME).azurecr.io"
             displayName: "Confirmation Message"
+
+
+  - stage: Deploy
+    displayName: "Deploy Docker Image to Azure App Service"
+    dependsOn: BuildAndPush
+    condition: succeeded()
+    jobs:
+      - deployment: DeployToAppService
+        displayName: "Deploy to Azure App Service"
+        environment: "production"
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: $(ServiceConnection)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      az acr login --name $(ACR_NAME)
+                      
+                      az webapp config container set \
+                        --name $(APP_SERVICE_NAME) \
+                        --resource-group $(RESOURCE_GROUP_NAME) \
+                        --docker-custom-image-name $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId) \
+                        --docker-registry-server-url https://$(ACR_NAME).azurecr.io \
+                        --docker-registry-server-user $(az acr credential show --name $(ACR_NAME) --query username -o tsv) \
+                        --docker-registry-server-password $(az acr credential show --name $(ACR_NAME) --query passwords[0].value -o tsv)
+                  displayName: "Deploy Docker Image to App Service"
