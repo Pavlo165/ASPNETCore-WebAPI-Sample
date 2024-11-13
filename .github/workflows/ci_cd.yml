@@ -31,6 +31,7 @@ stages:
                 docker build -t $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId) .
 
                 docker push $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.BuildId)
+            displayName: "build and push image"
 
           - script: |
               echo "Docker image $(IMAGE_NAME):$(Build.BuildId) was successfully pushed to $(ACR_NAME).azurecr.io"
